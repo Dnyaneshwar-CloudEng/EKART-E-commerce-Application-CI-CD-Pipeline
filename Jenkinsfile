@@ -32,8 +32,8 @@ pipeline {
         }
 
         stage('SonarQube analysis') {
-            // SonarScanner needs Java 11+, so this stage uses JDK 17
-            tools { jdk 'jdk-17' }
+            // SonarScanner needs Java 11+, so this stage uses JDK 21
+            tools { jdk 'jdk-21' }
             steps {
                 withSonarQubeEnv('sonar-scanner') {
                     sh """
