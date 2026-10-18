@@ -1,16 +1,14 @@
-
-
-
 pipeline {
     agent any
 
-    environment {
-        SCANNER_HOME = tool 'sonar-scanner'
-    }
-
     tools {
         maven 'maven3'
-        jdk 'jdk-17'
+        jdk 'jdk8'                      // must match the name in Manage Jenkins → Tools
+    }
+
+    environment {
+        // must match the SonarQube Scanner name in Manage Jenkins → Tools
+        SCANNER_HOME = tool 'sonar-scanner'
     }
 
     stages {
@@ -74,7 +72,7 @@ pipeline {
             steps {
                 withMaven(
                     globalMavenSettingsConfig: 'global-maven',
-                    jdk: 'jdk-17',
+                    jdk: 'jdk8',
                     maven: 'maven3',
                     mavenSettingsConfig: '',
                     traceability: true
@@ -93,10 +91,7 @@ pipeline {
         stage('Push image to Hub') {
             steps {
                 withCredentials([
-                    string(
-                        credentialsId: 'dockerhub-pwd',
-                        variable: 'dockerhubpwd'
-                    )
+                    string(credentialsId: 'dockerhub-pwd', variable: 'dockerhubpwd')
                 ]) {
                     sh '''
                         echo "$dockerhubpwd" | docker login \
