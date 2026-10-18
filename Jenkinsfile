@@ -32,6 +32,7 @@ pipeline {
         }
 
         stage('SonarQube analysis') {
+            tools { jdk 'jdk-17' }
             steps {
                 withSonarQubeEnv('sonar-scanner') {
                     sh """
