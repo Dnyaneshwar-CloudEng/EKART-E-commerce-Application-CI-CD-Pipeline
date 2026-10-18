@@ -1,39 +1,36 @@
+
 pipeline {
     agent any
 
     tools {
         maven 'maven3'
-        jdk 'jdk-8'
+        jdk 'jdk-21'
     }
 
     environment {
-        // Must match the SonarQube Scanner name in Manage Jenkins -> Tools
         SCANNER_HOME = tool 'sonar-scanner'
     }
 
     stages {
-        stage('git checkout') {
+        stage('Git Checkout') {
             steps {
-                // Uses the same repo/branch the Jenkinsfile was loaded from
                 checkout scm
             }
         }
 
-        stage('compile') {
+        stage('Compile') {
             steps {
                 sh 'mvn compile'
             }
         }
 
-        stage('unit tests') {
+        stage('Unit Tests') {
             steps {
                 sh 'mvn test'
             }
         }
 
-        stage('SonarQube analysis') {
-            // SonarScanner needs Java 11+, so this stage uses JDK 21
-            tools { jdk 'jdk-21' }
+        stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonar-scanner') {
                     sh """
@@ -70,11 +67,11 @@ pipeline {
             }
         }
 
-        stage('deploy to Nexus') {
+        stage('Deploy to Nexus') {
             steps {
                 withMaven(
                     globalMavenSettingsConfig: 'global-maven',
-                    jdk: 'jdk-8',
+                    jdk: 'jdk-21',
                     maven: 'maven3',
                     mavenSettingsConfig: '',
                     traceability: true
@@ -84,16 +81,19 @@ pipeline {
             }
         }
 
-        stage('build and Tag docker image') {
+        stage('Build Docker Image') {
             steps {
                 sh 'docker build -t youngminds73/ekart:latest -f docker/Dockerfile .'
             }
         }
 
-        stage('Push image to Hub') {
+        stage('Push Image to Docker Hub') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'dockerhub-pwd', variable: 'dockerhubpwd')
+                    string(
+                        credentialsId: 'dockerhub-pwd',
+                        variable: 'dockerhubpwd'
+                    )
                 ]) {
                     sh '''
                         echo "$dockerhubpwd" | docker login \
@@ -105,13 +105,14 @@ pipeline {
             }
         }
 
-        stage('EKS and Kubectl configuration') {
+        stage('Configure EKS') {
             steps {
                 sh 'aws eks update-kubeconfig --region ap-south-1 --name project-cluster'
+                sh 'kubectl get nodes'
             }
         }
 
-        stage('Deploy to k8s') {
+        stage('Deploy to Kubernetes') {
             steps {
                 sh 'kubectl apply -f deploymentservice.yml'
             }
