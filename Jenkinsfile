@@ -1,5 +1,6 @@
 
 
+
 pipeline {
     agent any
 
@@ -28,7 +29,7 @@ pipeline {
 
         stage('unit tests') {
             steps {
-                sh 'mvn test -DskipTests=true'
+                sh 'mvn test'
             }
         }
 
@@ -47,12 +48,15 @@ pipeline {
 
         stage('OWASP Dependency Check') {
             steps {
-                sh 'mkdir -p reports'
-
                 dependencyCheck(
                     odcInstallation: 'DC',
-                    additionalArguments: '--format XML --out reports'
+                    additionalArguments: '--format XML'
                 )
+
+                sh '''
+                    echo "Checking Dependency-Check reports..."
+                    find . -type f -name "dependency-check-report.xml"
+                '''
 
                 dependencyCheckPublisher(
                     pattern: '**/dependency-check-report.xml'
@@ -117,6 +121,3 @@ pipeline {
         }
     }
 }
-
-    
-
