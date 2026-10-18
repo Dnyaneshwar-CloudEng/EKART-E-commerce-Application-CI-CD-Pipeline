@@ -1,4 +1,5 @@
 
+
 pipeline {
     agent any
 
@@ -46,9 +47,11 @@ pipeline {
 
         stage('OWASP Dependency Check') {
             steps {
+                sh 'mkdir -p reports'
+
                 dependencyCheck(
-                    additionalArguments: '--format XML',
-                    odcInstallation: 'DC'
+                    odcInstallation: 'DC',
+                    additionalArguments: '--format XML --out reports'
                 )
 
                 dependencyCheckPublisher(
@@ -112,6 +115,9 @@ pipeline {
                 sh 'kubectl apply -f deploymentservice.yml'
             }
         }
+    }
+}
+
     }
 }
 
