@@ -51,9 +51,9 @@ pipeline {
                 )
 
                 sh '''
-                    echo "Checking Dependency-Check reports..."
-                    find . -type f -name "dependency-check-report.xml"
-                '''
+                   echo "Searching for Dependency-Check reports..."
+                   find . -type f -name "dependency-check-report.*"
+                   '''
 
                 dependencyCheckPublisher(
                     pattern: '**/dependency-check-report.xml'
