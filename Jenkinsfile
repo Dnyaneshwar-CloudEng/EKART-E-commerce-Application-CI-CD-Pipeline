@@ -2,20 +2,20 @@ pipeline {
     agent any
 
     tools {
-    maven 'maven3'
-    jdk 'jdk-8'
+        maven 'maven3'
+        jdk 'jdk-8'
     }
 
     environment {
-        // must match the SonarQube Scanner name in Manage Jenkins → Tools
+        // Must match the SonarQube Scanner name in Manage Jenkins -> Tools
         SCANNER_HOME = tool 'sonar-scanner'
     }
 
     stages {
         stage('git checkout') {
             steps {
-                git branch: 'master',
-                    url: 'https://github.com/ygminds73/Ekart.git'
+                // Uses the same repo/branch the Jenkinsfile was loaded from
+                checkout scm
             }
         }
 
@@ -32,7 +32,8 @@ pipeline {
         }
 
         stage('SonarQube analysis') {
-            tools { jdk 'jdk-8}
+            // SonarScanner needs Java 11+, so this stage uses JDK 17
+            tools { jdk 'jdk-17' }
             steps {
                 withSonarQubeEnv('sonar-scanner') {
                     sh """
