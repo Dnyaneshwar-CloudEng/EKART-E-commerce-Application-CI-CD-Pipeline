@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     tools {
-        maven 'maven3'
-        jdk 'jdk8'                      // must match the name in Manage Jenkins → Tools
+    maven 'maven3'
+    jdk 'jdk-8'
     }
 
     environment {
@@ -72,7 +72,7 @@ pipeline {
             steps {
                 withMaven(
                     globalMavenSettingsConfig: 'global-maven',
-                    jdk: 'jdk8',
+                    jdk: 'jdk-8',
                     maven: 'maven3',
                     mavenSettingsConfig: '',
                     traceability: true
