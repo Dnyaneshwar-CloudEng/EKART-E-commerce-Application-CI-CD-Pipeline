@@ -11,6 +11,7 @@ pipeline {
     }
 
     stages {
+
         stage('Git Checkout') {
             steps {
                 checkout scm
@@ -25,14 +26,12 @@ pipeline {
 
         stage('Unit Tests') {
             steps {
-                // FIXED: Removed -DskipTests=true so unit tests actually run in this stage
                 sh 'mvn test'
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                // Relies on the Jenkins System Config named 'sonar-scanner'
                 withSonarQubeEnv('sonar-scanner') {
                     sh """
                         ${SCANNER_HOME}/bin/sonar-scanner \
@@ -46,21 +45,16 @@ pipeline {
 
         stage('OWASP Dependency Check') {
             steps {
-                withCredentials([
-                    string(
-                        credentialsId: 'nvd-api-key',
-                        variable: 'NVD_API_KEY'
-                    )
-                ]) {
-                    dependencyCheck(
-                        odcInstallation: 'DC',
-                        additionalArguments: '--format XML --out reports --nvdApiKey ' + env.NVD_API_KEY
-                    )
-                }
+                sh 'mkdir -p reports'
+
+                dependencyCheck(
+                    odcInstallation: 'DC',
+                    additionalArguments: '--scan . --format XML --out reports'
+                )
 
                 sh '''
                     echo "Checking Dependency-Check report..."
-                    find reports -type f -name "*.xml"
+                    find reports -type f -print
                 '''
 
                 dependencyCheckPublisher(
@@ -71,7 +65,6 @@ pipeline {
 
         stage('Build') {
             steps {
-                // Skips tests here since they already ran successfully in the 'Unit Tests' stage
                 sh 'mvn package -DskipTests=true'
             }
         }
@@ -92,7 +85,11 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t youngminds73/ekart:latest -f docker/Dockerfile .'
+                sh '''
+                    docker build \
+                    -t youngminds73/ekart:latest \
+                    -f docker/Dockerfile .
+                '''
             }
         }
 
@@ -106,9 +103,11 @@ pipeline {
                 ]) {
                     sh '''
                         set +x
-                        echo "$dockerhubpwd" | docker login -u youngminds73 --password-stdin
+                        echo "$dockerhubpwd" | docker login \
+                            -u youngminds73 --password-stdin
                     '''
                 }
+
                 sh 'docker push youngminds73/ekart:latest'
             }
         }
@@ -119,6 +118,7 @@ pipeline {
                     aws eks update-kubeconfig \
                         --region ap-south-1 \
                         --name project-cluster
+
                     kubectl get nodes
                 '''
             }
