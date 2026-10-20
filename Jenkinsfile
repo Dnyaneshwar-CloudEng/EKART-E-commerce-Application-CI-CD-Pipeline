@@ -6,10 +6,12 @@ pipeline {
         jdk 'jdk-21'
     }
 
-    environment {
-       SCANNER_HOME = tool 'sonar-scanner'
-       MAVEN_OPTS = '--add-opens=java.base/java.lang=ALL-UNNAMED'
-   }
+   
+environment {
+    SCANNER_HOME = tool 'sonar-scanner'
+    JAVA_TOOL_OPTIONS = '--add-opens=java.base/java.lang=ALL-UNNAMED'
+}
+
 
 
     stages {
