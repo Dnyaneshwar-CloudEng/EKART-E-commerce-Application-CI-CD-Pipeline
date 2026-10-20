@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -6,13 +7,10 @@ pipeline {
         jdk 'jdk-21'
     }
 
-   
-environment {
-    SCANNER_HOME = tool 'sonar-scanner'
-    JAVA_TOOL_OPTIONS = '--add-opens=java.base/java.lang=ALL-UNNAMED'
-}
-
-
+    environment {
+        SCANNER_HOME = tool 'sonar-scanner'
+        JAVA_TOOL_OPTIONS = '--add-opens=java.base/java.lang=ALL-UNNAMED'
+    }
 
     stages {
 
@@ -59,6 +57,7 @@ environment {
                 sh '''
                     echo "Checking Dependency-Check report..."
                     find reports -type f -print
+                    test -f reports/dependency-check-report.xml
                 '''
 
                 dependencyCheckPublisher(
