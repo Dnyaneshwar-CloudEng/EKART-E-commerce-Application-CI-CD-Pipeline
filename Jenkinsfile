@@ -1,7 +1,3 @@
-
-
-
-
 pipeline {
     agent any
 
@@ -15,7 +11,6 @@ pipeline {
     }
 
     stages {
-
         stage('Git Checkout') {
             steps {
                 checkout scm
@@ -24,32 +19,30 @@ pipeline {
 
         stage('Compile') {
             steps {
-                sh 'mvn compile'
+                sh 'mvn clean compile'
             }
         }
 
         stage('Unit Tests') {
             steps {
-                // Currently skips tests, matching your existing configuration.
-                sh 'mvn test -DskipTests=true'
+                // FIXED: Removed -DskipTests=true so unit tests actually run in this stage
+                sh 'mvn test'
             }
         }
 
-        
-stage('SonarQube Analysis') {
-    steps {
-        withSonarQubeEnv('sonar-scanner') {
-            sh """
-                ${SCANNER_HOME}/bin/sonar-scanner \
-                -Dsonar.projectKey=EKART \
-                -Dsonar.projectName=EKART \
-                -Dsonar.java.binaries=target/classes \
-                -Dsonar.host.url=http://10.0.0.222:9000
-            """
+        stage('SonarQube Analysis') {
+            steps {
+                // Relies on the Jenkins System Config named 'sonar-scanner'
+                withSonarQubeEnv('sonar-scanner') {
+                    sh """
+                        ${SCANNER_HOME}/bin/sonar-scanner \
+                        -Dsonar.projectKey=EKART \
+                        -Dsonar.projectName=EKART \
+                        -Dsonar.java.binaries=target/classes
+                    """
+                }
+            }
         }
-    }
-}
-
 
         stage('OWASP Dependency Check') {
             steps {
@@ -78,6 +71,7 @@ stage('SonarQube Analysis') {
 
         stage('Build') {
             steps {
+                // Skips tests here since they already ran successfully in the 'Unit Tests' stage
                 sh 'mvn package -DskipTests=true'
             }
         }
@@ -112,11 +106,9 @@ stage('SonarQube Analysis') {
                 ]) {
                     sh '''
                         set +x
-                        echo "$dockerhubpwd" | docker login \
-                            -u youngminds73 --password-stdin
+                        echo "$dockerhubpwd" | docker login -u youngminds73 --password-stdin
                     '''
                 }
-
                 sh 'docker push youngminds73/ekart:latest'
             }
         }
@@ -127,7 +119,6 @@ stage('SonarQube Analysis') {
                     aws eks update-kubeconfig \
                         --region ap-south-1 \
                         --name project-cluster
-
                     kubectl get nodes
                 '''
             }
