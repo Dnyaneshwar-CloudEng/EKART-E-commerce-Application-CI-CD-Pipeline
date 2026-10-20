@@ -35,18 +35,21 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('sonar-scanner') {
-                    sh """
-                        ${SCANNER_HOME}/bin/sonar-scanner \
-                        -Dsonar.projectKey=EKART \
-                        -Dsonar.projectName=EKART \
-                        -Dsonar.java.binaries=target/classes
-                    """
-                }
-            }
+        
+stage('SonarQube Analysis') {
+    steps {
+        withSonarQubeEnv('sonar-scanner') {
+            sh """
+                ${SCANNER_HOME}/bin/sonar-scanner \
+                -Dsonar.projectKey=EKART \
+                -Dsonar.projectName=EKART \
+                -Dsonar.java.binaries=target/classes \
+                -Dsonar.host.url=http://10.0.0.222:9000
+            """
         }
+    }
+}
+
 
         stage('OWASP Dependency Check') {
             steps {
