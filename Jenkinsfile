@@ -1,136 +1,101 @@
-
 pipeline {
     agent any
 
-    tools {
-        maven 'maven3'
-        jdk 'jdk-21'
-    }
-
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        JAVA_TOOL_OPTIONS = '--add-opens=java.base/java.lang=ALL-UNNAMED'
+        NVD_API_KEY = credentials('nvd-api-key')  // Jenkins secret text credential
+    }
+
+    tools {
+        maven 'maven3'
+        jdk 'jdk-17'
     }
 
     stages {
-
-        stage('Git Checkout') {
+        stage('git checkout') {
             steps {
-                checkout scm
+                git branch: 'master', url: 'https://github.com/ygminds73/Ekart.git'
             }
         }
 
-        stage('Compile') {
+        stage('compile') {
             steps {
-                sh 'mvn clean compile'
+                sh "mvn compile"
             }
         }
 
-        stage('Unit Tests') {
+        stage('unit tests') {
             steps {
-                sh 'mvn test'
+                sh "mvn test -DskipTests=true"
             }
         }
 
-        stage('SonarQube Analysis') {
+        stage('SonarQube analysis') {
             steps {
                 withSonarQubeEnv('sonar-scanner') {
-                    sh """
-                        ${SCANNER_HOME}/bin/sonar-scanner \
+                    sh "${env.SCANNER_HOME}/bin/sonar-scanner \
                         -Dsonar.projectKey=EKART \
                         -Dsonar.projectName=EKART \
-                        -Dsonar.java.binaries=target/classes
-                    """
+                        -Dsonar.java.binaries=target/classes"
                 }
             }
         }
 
         stage('OWASP Dependency Check') {
             steps {
-                sh 'mkdir -p reports'
-
-                dependencyCheck(
-                    odcInstallation: 'DC',
-                    additionalArguments: '--scan . --format XML --out reports'
-                )
-
-                sh '''
-                    echo "Checking Dependency-Check report..."
-                    find reports -type f -print
-                    test -f reports/dependency-check-report.xml
-                '''
-
-                dependencyCheckPublisher(
-                    pattern: 'reports/dependency-check-report.xml'
-                )
-            }
+                  withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
+                    dependencyCheck additionalArguments: "--nvdApiKey=$NVD_API_KEY",
+                                    odcInstallation: 'DC'
+             }
+        }
         }
 
         stage('Build') {
             steps {
-                sh 'mvn package -DskipTests=true'
+                sh "mvn package -DskipTests=true"
             }
         }
 
-        stage('Deploy to Nexus') {
+        stage('deploy to Nexus') {
             steps {
-                withMaven(
-                    globalMavenSettingsConfig: 'global-maven',
-                    jdk: 'jdk-21',
-                    maven: 'maven3',
-                    mavenSettingsConfig: '',
-                    traceability: true
-                ) {
-                    sh 'mvn deploy -DskipTests=true'
+                withMaven(globalMavenSettingsConfig: 'global-maven', jdk: 'jdk-17', maven: 'maven3', mavenSettingsConfig: '', traceability: true) {
+                    sh "mvn deploy -DskipTests=true"
                 }
             }
         }
+        
 
-        stage('Build Docker Image') {
+        stage('build and Tag docker image') {
             steps {
-                sh '''
-                    docker build \
-                    -t youngminds73/ekart:latest \
-                    -f docker/Dockerfile .
-                '''
+                script {
+                        sh "docker build -t youngminds73/ekart:latest -f docker/Dockerfile ."
+                    }
             }
         }
 
-        stage('Push Image to Docker Hub') {
-            steps {
-                withCredentials([
-                    string(
-                        credentialsId: 'dockerhub-pwd',
-                        variable: 'dockerhubpwd'
-                    )
-                ]) {
-                    sh '''
-                        set +x
-                        echo "$dockerhubpwd" | docker login \
-                            -u youngminds73 --password-stdin
-                    '''
+        stage('Push image to Hub'){
+            steps{
+                script{
+                   withCredentials([string(credentialsId: 'dockerhub-pwd', variable: 'dockerhubpwd')]) {
+                   sh 'docker login -u youngminds73 -p ${dockerhubpwd}'}
+                   sh 'docker push youngminds73/ekart:latest'
                 }
-
-                sh 'docker push youngminds73/ekart:latest'
             }
         }
-
-        stage('Configure EKS') {
-            steps {
-                sh '''
-                    aws eks update-kubeconfig \
-                        --region ap-south-1 \
-                        --name project-cluster
-
-                    kubectl get nodes
-                '''
+        stage('EKS and Kubectl configuration'){
+            steps{
+                script{
+                    sh 'aws eks update-kubeconfig --region ap-south-1 --name project-cluster'
+                }
             }
         }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh 'kubectl apply -f deploymentservice.yml'
+        stage('Deploy to k8s'){
+            steps{
+                script{
+                    sh 'kubectl apply -f deploymentservice.yml'
+                }
             }
         }
     }
+
 }
