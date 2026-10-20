@@ -7,8 +7,10 @@ pipeline {
     }
 
     environment {
-        SCANNER_HOME = tool 'sonar-scanner'
-    }
+       SCANNER_HOME = tool 'sonar-scanner'
+       MAVEN_OPTS = '--add-opens=java.base/java.lang=ALL-UNNAMED'
+   }
+
 
     stages {
 
