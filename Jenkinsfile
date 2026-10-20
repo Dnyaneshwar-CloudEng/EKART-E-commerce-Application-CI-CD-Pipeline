@@ -1,4 +1,5 @@
 
+
 pipeline {
     agent any
 
@@ -45,18 +46,25 @@ pipeline {
 
         stage('OWASP Dependency Check') {
             steps {
-                dependencyCheck(
-                    odcInstallation: 'DC',
-                    additionalArguments: '--format XML'
-                )
+                withCredentials([
+                    string(
+                        credentialsId: 'nvd-api-key',
+                        variable: 'NVD_API_KEY'
+                    )
+                ]) {
+                    dependencyCheck(
+                        odcInstallation: 'DC',
+                        additionalArguments: "--scan . --format XML --out reports --nvdApiKey ${NVD_API_KEY}"
+                    )
+                }
 
                 sh '''
-                   echo "Searching for Dependency-Check reports..."
-                   find . -type f -name "dependency-check-report.*"
-                   '''
+                    echo "Checking Dependency-Check report..."
+                    find reports -type f -name "*.xml"
+                '''
 
                 dependencyCheckPublisher(
-                    pattern: '**/dependency-check-report.xml'
+                    pattern: 'reports/dependency-check-report.xml'
                 )
             }
         }
